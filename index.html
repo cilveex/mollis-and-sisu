@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1f2419"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Mollis"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>
+<title>Mollis and Sisu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: one full-bleed watercolour page per scene; a torn paper sheet rises from the bottom carrying the words and drawn choices. Single storybook look, both themes. */
+:root{
+  --paper:#f7ecd2;
+  --paper-deep:#eedcb4;
+  --ink:#3f3a2b;
+  --ink-soft:#6b6249;
+  --moss:#5d7142;
+  --ember:#b8562f;
+  --night:#1f2419;
+  --f-display:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --f-body:"Lora",Georgia,"Times New Roman",serif;
+  --f-hand:"Caveat","Segoe Print","Bradley Hand","Comic Sans MS",cursive;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{margin:0;background:var(--night);color:var(--ink);font-family:var(--f-body);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+button:focus-visible{outline:3px solid var(--ember);outline-offset:3px;border-radius:14px}
+
+.app{position:fixed;inset:0;margin:auto;width:min(100%,460px);height:100%;overflow:hidden;background:var(--paper)}
+@media (min-width:600px){.app{height:min(960px,calc(100% - 40px));border-radius:28px;box-shadow:0 30px 80px #000a}}
+
+/* scene layers */
+.scene{position:absolute;inset:0;background:var(--paper-deep)}
+.scene img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%;opacity:0;transform:translateY(calc(var(--dy,0px) * -1));transition:opacity .7s ease,transform .55s cubic-bezier(.2,.8,.2,1)}
+.scene img.on{opacity:1}
+.shade{position:absolute;z-index:1;inset:0 0 auto;height:150px;background:linear-gradient(#1d22168c,transparent);pointer-events:none}
+
+/* header */
+.top{position:absolute;z-index:4;left:0;right:0;top:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) max(14px,env(safe-area-inset-right,0px)) 0 max(14px,env(safe-area-inset-left,0px))}
+.badge{width:48px;height:48px;display:grid;place-items:center;background:url(ui/watercolor-golden-circle-badge.webp) center/contain no-repeat;filter:drop-shadow(0 3px 6px #0005);transition:transform .15s,opacity .2s}
+.badge img{width:26px;height:26px;object-fit:contain}
+.badge:active{transform:scale(.92) rotate(-4deg)}
+.badge[disabled]{opacity:.4;pointer-events:none}
+.top>.badge{justify-self:start}
+.tright{justify-self:end;display:flex;gap:6px}
+.badge svg{width:24px;height:24px}
+.logo{font-family:var(--f-display);font-size:30px;font-weight:500;color:#fff8e6;text-shadow:0 2px 10px #1d2216b0;letter-spacing:.5px;line-height:1}
+
+/* paper sheet */
+.sheet{position:absolute;z-index:3;left:0;right:0;bottom:0;filter:drop-shadow(0 -6px 14px #2a241540);transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.sheet.out{transform:translateY(24px);opacity:0}
+.sheet.peek{transform:translateY(calc(100% - var(--peek,96px) - env(safe-area-inset-bottom,0px)));cursor:pointer}
+.sheet.peek.out{opacity:0}
+.readhint{position:absolute;z-index:2;top:-30px;right:max(18px,env(safe-area-inset-right,0px));font-family:var(--f-hand);font-size:23px;font-weight:700;color:#fff8e6;text-shadow:0 1px 3px #000,0 2px 10px #000c;pointer-events:none;opacity:0;transition:opacity .3s}
+.peek .readhint{opacity:1;animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateY(-3px)}}
+.body,.question,.choices,#extra{transition:opacity .3s}
+.peek .body,.peek .question,.peek .choices,.peek #extra{opacity:0;visibility:hidden}
+.tip{position:absolute;z-index:3;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 70px);text-align:center;font-family:var(--f-hand);font-size:21px;color:#fff8e6;text-shadow:0 2px 8px #000c;transition:opacity .6s;pointer-events:none}
+.paper{max-height:min(64vh,600px);overflow-y:auto;overscroll-behavior:contain;
+  background:url(ui/warm-cream-watercolor-paper-texture.webp) center/cover,var(--paper);
+  padding-block:26px calc(12px + env(safe-area-inset-bottom,0px));
+  padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:7px;
+  -webkit-mask:var(--tear) top left/220px 18px repeat-x,linear-gradient(#000,#000) 0 17px/100% calc(100% - 17px) no-repeat;
+          mask:var(--tear) top left/220px 18px repeat-x,linear-gradient(#000,#000) 0 17px/100% calc(100% - 17px) no-repeat;
+  --tear:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 18' preserveAspectRatio='none'%3E%3Cpath d='M0 9 C12 4 22 12 34 8 S55 3 68 9 86 14 99 8 120 2 133 8 150 15 164 9 186 3 199 8 212 12 220 9 V18 H0Z'/%3E%3C/svg%3E")}
+.eyebrow{margin:0;text-align:center;font-family:var(--f-hand);font-size:19px;font-weight:700;color:var(--moss);letter-spacing:.5px}
+.title{margin:0;text-align:center;font-family:var(--f-display);font-weight:500;font-size:clamp(25px,7vw,30px);line-height:1.08;text-wrap:balance}
+.body{margin:0 auto;max-width:38ch;text-align:center;font-size:15px;line-height:1.42;color:var(--ink-soft);text-wrap:pretty}
+.question{margin:0;text-align:center;font-family:var(--f-hand);font-size:23px;font-weight:700;color:var(--ink)}
+
+/* drawn choices */
+.choices{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.choice{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;text-align:left;
+  border-style:solid;border-width:14px 22px;border-image:url(ui/watercolor-yellow-stitched-label.webp) 70 90 fill stretch;
+  padding:0;margin:0;transition:transform .12s ease;animation:pop .45s backwards}
+.choice.alt{border-image-source:url(ui/watercolor-sage-green-stitched-banner.webp)}
+.choice:nth-child(2){animation-delay:.08s}
+.choice:active{transform:scale(.97) rotate(-.6deg)}
+.choice:nth-child(even):active{transform:scale(.97) rotate(.6deg)}
+.emblem{flex-shrink:0;width:44px;height:44px;margin:-8px 0 -8px -10px;display:grid;place-items:center;background:url(ui/watercolor-golden-circle-badge.webp) center/contain no-repeat}
+.emblem img{width:30px;height:30px;object-fit:contain}
+.label{flex:1;min-width:0;font-family:var(--f-hand);font-size:24px;font-weight:700;line-height:1;color:var(--ink)}
+.hint{display:block;margin-top:3px;font-family:var(--f-body);font-style:italic;font-size:12.5px;font-weight:400;color:var(--ink-soft);line-height:1.2}
+.arrow{font-family:var(--f-hand);font-size:30px;color:var(--ink-soft);margin-right:-6px}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}}
+
+
+/* candles */
+.cake{display:flex;flex-direction:column;align-items:center;gap:6px}
+.candles{display:flex;gap:14px;align-items:flex-end;padding:30px 18px 0;cursor:pointer}
+.candle{position:relative;width:14px;height:46px;border:1.5px solid #5b3d24;border-radius:4px 5px 3px 4px;
+  background:repeating-linear-gradient(-35deg,#fbf1dc 0 6px,#e27a5c 6px 10px)}
+.candle:nth-child(2){height:52px}.candle:nth-child(4){height:50px}
+.candle:before{content:"";position:absolute;left:50%;top:-7px;width:1.5px;height:7px;background:#3f3a2b;transform:translateX(-50%)}
+.flame{position:absolute;left:50%;bottom:calc(100% + 5px);width:13px;height:22px;margin-left:-6.5px;border-radius:50% 50% 45% 45%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 50% 70%,#fff8d0 0 25%,#ffc94a 45%,#f08a2c 75%,#f08a2c00 76%);transform-origin:50% 90%;animation:flick .6s ease-in-out infinite alternate;transition:transform .35s,opacity .35s}
+.candle:nth-child(odd) .flame{animation-duration:.75s}
+@keyframes flick{to{transform:scale(.88,1.08) rotate(3deg)}}
+.out .flame{opacity:0;transform:scale(.2) translateY(-6px)}
+.smoke{position:absolute;left:50%;bottom:calc(100% + 8px);width:8px;height:8px;margin-left:-4px;border-radius:50%;background:#9a9286;opacity:0}
+.out .smoke{animation:smoke 1.4s ease-out forwards}
+@keyframes smoke{0%{opacity:.6;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(6px,-40px) scale(3)}}
+.micline{font-family:var(--f-hand);font-size:19px;color:var(--ink-soft);text-align:center}
+.micbtn{font-family:var(--f-hand);font-size:19px;font-weight:700;color:var(--moss);text-decoration:underline;text-underline-offset:3px}
+
+/* present */
+.present{display:grid;place-items:center;padding:6px 0}
+.present button{display:grid;justify-items:center;gap:2px}
+.present img{width:118px;height:auto;animation:wiggle 1.8s ease-in-out infinite;filter:drop-shadow(0 6px 8px #4a3a1e40)}
+.present span{font-family:var(--f-hand);font-size:22px;font-weight:700;color:var(--ember)}
+.present.opened img{animation:burst .5s forwards}
+@keyframes wiggle{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-7deg)}82%{transform:rotate(6deg)}88%{transform:rotate(-4deg)}94%{transform:rotate(2deg)}}
+@keyframes burst{40%{transform:scale(1.2) rotate(-6deg)}100%{transform:scale(1.6);opacity:0}}
+
+/* letter overlay */
+.veil{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;background:#211d14b8;opacity:0;pointer-events:none;transition:opacity .4s;
+  padding-block:calc(env(safe-area-inset-top,0px) + 20px) calc(env(safe-area-inset-bottom,0px) + 20px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.veil.show{opacity:1;pointer-events:auto}
+.letter{position:relative;width:min(100%,380px);max-height:100%;overflow-y:auto;
+  background:url(ui/warm-cream-watercolor-paper-texture.webp) center/cover,var(--paper);
+  padding:30px 26px 22px;border-radius:4px 6px 5px 3px;transform:translateY(40px) rotate(-1.5deg);transition:transform .6s cubic-bezier(.2,.9,.25,1.2);
+  box-shadow:0 20px 50px #0008, inset 0 0 0 1.5px #c9b07a;
+  font-family:var(--f-hand);font-size:24px;line-height:1.28;color:var(--ink)}
+.veil.show .letter{transform:translateY(0) rotate(-1.5deg)}
+.letter h2{margin:0 0 12px;padding-right:44px;font-family:var(--f-hand);font-size:34px;font-weight:700;color:var(--ember);line-height:1.05}
+.letter p{margin:0 0 10px}
+.letter .sign{text-align:right;margin-top:14px;font-weight:700;font-size:27px}
+.letter .stamp{position:absolute;top:12px;right:14px;width:46px;transform:rotate(9deg)}
+.letter .close,.film .close{display:block;margin:16px auto 0;font-family:var(--f-hand);font-size:22px;font-weight:700;
+  border-style:solid;border-width:12px 20px;border-image:url(ui/watercolor-sage-green-stitched-banner.webp) 70 90 fill stretch;padding:0 6px}
+
+/* cover */
+.cover{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;justify-content:space-between;transition:opacity .6s}
+.cover.hide{opacity:0;pointer-events:none}
+.cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 45%}
+.cover:before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(#1d2216a0 0%,#1d221600 32%,#1d221600 55%,#f7ecd2 92%)}
+.cover-head,.cover-foot{position:relative;z-index:2;text-align:center}
+.cover-head{padding-top:calc(env(safe-area-inset-top,0px) + 40px)}
+.cover-head small{display:block;font-family:var(--f-hand);font-size:20px;color:#fff3d6;text-shadow:0 1px 8px #000a}
+.cover-head h1{margin:2px 0 0;font-family:var(--f-display);font-weight:500;font-size:clamp(52px,16vw,68px);line-height:.92;color:#fff8e6;text-shadow:0 4px 20px #1d2216b8}
+.cover-head h1 span{display:block;margin:4px 0 2px;font-family:var(--f-hand);font-size:.5em;font-weight:700;line-height:1}
+.cover-foot{padding-block:0 calc(env(safe-area-inset-bottom,0px) + 34px);padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.cover-foot p{margin:0 auto 14px;max-width:26ch;font-family:var(--f-display);font-style:italic;font-size:20px;line-height:1.3;color:var(--ink)}
+.start{display:inline-flex;align-items:center;gap:8px;min-height:64px;font-family:var(--f-hand);font-size:28px;font-weight:700;
+  border-style:solid;border-width:16px 30px;border-image:url(ui/watercolor-yellow-stitched-label.webp) 70 90 fill stretch;animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.04)}}
+
+/* guide */
+.guide{position:absolute;inset:0;z-index:9;display:grid;place-items:center;background:#211d14b8;padding:24px}
+.guide .letter{transform:rotate(1deg);text-align:center;font-size:23px}
+
+/* the little film: a looping instant photo */
+.film{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#211d14c9;opacity:0;pointer-events:none;transition:opacity .5s;
+  padding-block:calc(env(safe-area-inset-top,0px) + 20px) calc(env(safe-area-inset-bottom,0px) + 20px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.film.show{opacity:1;pointer-events:auto}
+.polaroid{position:relative;width:min(100%,440px,calc((100dvh - 240px) * 16 / 9 + 28px));background:#fbf6ea;padding:14px 14px 0;
+  box-shadow:0 22px 50px #000a,inset 0 0 0 1px #e6dcc4;transform:rotate(-2.5deg) translateY(36px) scale(.94);transition:transform .7s cubic-bezier(.2,.9,.25,1.15)}
+.film.show .polaroid{transform:rotate(-2.5deg)}
+.polaroid:before{content:"";position:absolute;top:-13px;left:50%;width:96px;height:26px;margin-left:-48px;background:#e9cf94b3;transform:rotate(4deg);box-shadow:0 1px 2px #0002}
+.polaroid video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#2a261a}
+.polaroid p{margin:0;padding:12px 4px 16px;text-align:center;font-family:var(--f-hand);font-size:26px;font-weight:700;color:var(--ink)}
+canvas#confetti{position:absolute;inset:0;z-index:7;pointer-events:none;width:100%;height:100%}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-height:740px){.paper{padding-block:24px calc(8px + env(safe-area-inset-bottom,0px));gap:5px}.body{font-size:14px;line-height:1.38}.choice{min-height:52px}.hint{display:none}.title{font-size:23px}.question{font-size:21px}.eyebrow{font-size:17px}}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition-duration:.01ms!important}}
+</style>
+
+<div class="app" id="app">
+  <div class="scene" id="scene"><img id="imgA" alt=""><img id="imgB" alt=""></div>
+  <div class="shade"></div>
+  <div class="top">
+    <button class="badge" id="back" aria-label="Go back"><img src="ui/curved-arrow-pointing-left.webp" alt=""></button>
+    <div class="logo">Moll</div>
+    <div class="tright">
+      <button class="badge" id="sound" aria-label="Music" aria-pressed="true"></button>
+      <button class="badge" id="guideBtn" aria-label="How this story works"><img src="ui/open-book.webp" alt=""></button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet">
+    <span class="readhint" aria-hidden="true">Tap to read ▴</span>
+    <div class="paper" id="paper" aria-live="polite">
+      <p class="eyebrow" id="eyebrow"></p>
+      <h1 class="title" id="title"></h1>
+      <p class="body" id="body"></p>
+      <div id="extra"></div>
+      <p class="question" id="question"></p>
+      <div class="choices" id="choices"></div>
+    </div>
+  </div>
+
+  <div class="tip" id="tip" hidden>Tap the page below to read the story</div>
+  <canvas id="confetti"></canvas>
+
+  <div class="film" id="film" role="dialog" aria-modal="true" aria-label="A little film for Lera">
+    <div class="polaroid">
+      <video id="filmVideo" muted playsinline loop preload="none" poster="video/lera-film-poster.jpg"><source src="video/lera-film.mp4" type="video/mp4"></video>
+      <p>Lera &amp; the forest friends</p>
+    </div>
+    <button class="close" id="filmClose">Close</button>
+  </div>
+
+  <div class="veil" id="veil" role="dialog" aria-modal="true" aria-label="Letter"><div class="letter" id="letter"></div></div>
+
+  <div class="cover" id="cover">
+    <img src="img/S01_cover.webp" alt="Mollis and Sisu at the start of a sunlit forest trail">
+    <div class="cover-head"><small>an interactive tale</small><h1>Mollis<span>and</span>Sisu</h1></div>
+    <div class="cover-foot"><p>Two friends. A thousand little possibilities.</p><button class="start" id="start">Begin the story →</button></div>
+  </div>
+
+  <div class="guide" id="guide" hidden><div class="letter">
+    <h2>A story you shape</h2>
+    <p>Walk beside Moll and Sisu. At every turning point, choose what they do next. Each choice leads somewhere new, and you can always go back.</p>
+    <p>Tap the picture to hide the words and see the whole illustration. Tap again to bring them back.</p>
+    <button class="close" id="guideClose">Back to the story</button>
+    <button class="close" id="restart" style="border-image-source:url(ui/watercolor-yellow-stitched-label.webp)">Start from the beginning</button>
+  </div></div>
+</div>
+
+<script>
+const NAME = "Lera";
+
+const LETTER_INVITE = `
+  <img class="stamp" src="ui/leaf-sprig.webp" alt="">
+  <h2>Dear Moll and Sisu,</h2>
+  <p>Someone very special is celebrating a birthday, and the whole forest wants to send her a birthday wish.</p>
+  <p>Please help us make it. Follow the owl to the hidden glade, and bring a little gift.</p>
+  <p class="sign">The robin, the hedgehog &amp; the owl</p>
+  <button class="close" data-close="b2">Follow the lanterns →</button>`;
+
+const LETTER_LOVE = `
+  <img class="stamp" src="ui/heart.webp" alt="">
+  <h2>Мой зайчик, с днём рождения!</h2>
+  <p>Ты самая красивая, и я говорю это не просто так. Когда ты смеёшься, твои глаза светятся, как янтарь.</p>
+  <p>Ты видишь в людях то, что никто не замечает. И ты увидела это во мне.</p>
+  <p>Спасибо, что ты рядом. За наш дом, за Моллиса, за наши вечера под одеялом.</p>
+  <p>Я не всегда умею говорить красивые слова. Но я тебя очень люблю. И выбираю тебя каждый день.</p>
+  <p class="sign">Твой ёжик 🦔</p>
+  <button class="close" data-close="@film">Close the letter</button>`;
+
+const toSurprise = ["envelope","Wait… what's that?","Something is flying this way","b1"];
+const again = ["open-book","Read another adventure","Try a different path","start"];
+
+const S = {
+ start:{img:"S02_start",eyebrow:"A woodland adventure",title:"A fork in the path",body:"Moll and Sisu wander through the forest as the evening sun paints the leaves gold. Soon, the path divides in two.",q:"Where should they go next?",
+   c:[["leaf-sprig","Take the forest path","Something rustles among the trees","woods"],["mountain","Explore the mountain cave","A tiny light flickers inside","cave"]]},
+ woods:{img:"S03_woods",eyebrow:"The forest path",title:"A little rustle",body:"Golden light dances through the leaves. Sisu hears a soft chirp nearby, and Moll stops to listen. Someone in the forest may need their help.",q:"What should the friends do?",
+   c:[["feather","Follow the little sound","A bird calls from the stream","bird"],["old-tree","Explore the old tree","A secret glimmers among the roots","tree"]]},
+ bird:{img:"S04_bird",eyebrow:"By the stream",title:"A friend in need",body:"A little robin sits beside the water, tired and unable to fly. Moll kneels gently while Sisu comes close to see how they can help.",q:"What should they do?",
+   c:[["heart","Help the little bird","Kindness comes first","endKindness"],["daisy","Find a quiet resting place","Give the bird time to rest","endRest"]]},
+ cave:{img:"S05_cave",eyebrow:"The mountain cave",title:"A light in the dark",body:"The cave looks mysterious, but a soft glow shimmers between the stones. Moll and Sisu look at each other, curious about what lies inside.",q:"Which way should they go?",
+   c:[["paper-lantern","Go inside the cave","Follow the tiny golden lights","crystal"],["mountain-peak-with-flag","Climb to the overlook","See the world from above","overlook"]]},
+ crystal:{img:"S06_crystal",eyebrow:"The crystal chamber",title:"The crystal's song",body:"Deep in the cave, a beautiful crystal shines with blue and violet light. It glows brighter when Moll and Sisu stand side by side.",q:"What will they do?",
+   c:[["gemstone","Discover its secret","Listen to its gentle song","endCrystal"],["sparkle","Leave it where it is","Some magic is best left untouched","endLight"]]},
+ overlook:{img:"S07_overlook",eyebrow:"Above the forest",title:"A wider view",body:"The friends climb to a quiet overlook. The sky glows peach and gold, and the forest stretches below like a patchwork quilt.",q:"How should they end the day?",
+   c:[["star","Watch the stars together","Make a wish for tomorrow","endStars"],["little-house","Follow the trail home","A cosy ending awaits","endHome"]]},
+ tree:{img:"S08_tree",eyebrow:"The old tree",title:"A secret in the roots",body:"Behind the old tree, Moll finds a tiny door tucked between the roots. Sisu notices a warm glow peeking through its little round window.",q:"What should they do?",
+   c:[["round-wooden-door","Knock politely","Someone might be home","endFriend"],["falling-leaves","Follow the root tunnel","See where it leads","endTunnel"]]},
+
+ endKindness:{end:1,img:"S09_end_kindness",title:"A kinder world",body:"Moll and Sisu help the little robin find its strength. It flutters up into the golden sky and drops a bright feather for each friend. Small acts of kindness can mean so much."},
+ endRest:{end:1,img:"S10_end_rest",title:"A quiet place to rest",body:"They find a sheltered nook beneath the ferns. The robin rests safely on soft moss while Moll and Sisu keep watch. Sometimes the kindest thing is simply to stay nearby."},
+ endFriend:{end:1,img:"S11_end_friend",title:"A new friend",body:"A shy hedgehog opens the tiny door and invites them in for warm tea. They share stories until the little home feels like the cosiest place in the whole forest."},
+ endTunnel:{end:1,img:"S12_end_tunnel",title:"The other side",body:"The root tunnel opens onto a moonlit hill. Moll and Sisu sit together and plan all the places they might explore tomorrow."},
+ endCrystal:{end:1,img:"S13_end_crystal",title:"A special treasure",body:"The crystal sings a gentle lullaby, filling the cave with ribbons of colour. Moll and Sisu leave with a memory of magic that will stay bright long after the light fades."},
+ endLight:{end:1,img:"S14_end_light",title:"A light to guide them",body:"They leave the crystal resting peacefully in the cave. Its soft glow lights the path home, and the friends promise to return one day."},
+ endStars:{end:1,img:"S15_end_stars",title:"A wish on the wind",body:"The first stars blink awake above the mountains. Moll and Sisu each make a quiet wish, then sit shoulder to shoulder, grateful for the day they shared."},
+ endHome:{end:1,img:"S16_end_home",title:"Home beneath the trees",body:"They follow the winding path home as the sky turns dusky blue. Beneath the old tree, they curl up together and dream of the places still waiting to be explored."},
+
+ b1:{img:"B01_owl_letter",eyebrow:"But the day isn't over yet…",title:"A letter on the wind",body:"A little owl in a green scarf swoops down from the branches. She carries a cream envelope sealed with a leaf. Sisu gasps. Moll only smiles, as if keeping a secret.",q:"What should they do?",
+   c:[["envelope","Open the letter","The seal is shaped like a leaf","@invite"],["owl","Follow the owl","She hoots and flies ahead","b2"]]},
+ b2:{img:"B02_lantern_path",eyebrow:"The lantern path",title:"Follow the lights",body:"Paper lanterns glow along a winding path. The owl flies ahead, glancing back to make sure no one is lost. Wherever she is going, it seems important to bring a gift.",q:"What gift should they bring?",
+   c:[["bouquet","Pick wildflowers","Daisies, poppies and cornflowers","b3a"],["leaf-crown","Weave a leaf crown","Autumn leaves and berries","b3b"]]},
+ b3a:{img:"B03a_flowers",gift:"flowers",eyebrow:"The meadow",title:"A bouquet of colours",body:"Sisu gathers the brightest flowers in the meadow while Moll holds the stems. Soon the bouquet is almost bigger than Sisu.",q:"The owl hoots. It's time.",
+   c:[["paw-prints","Hurry after the owl","The lanterns are lighting up","b4"]]},
+ b3b:{img:"B03b_crown",gift:"crown",eyebrow:"The mossy log",title:"A crown of leaves",body:"Moll and Sisu weave autumn leaves, berries and tiny flowers into a crown fit for someone very special.",q:"The owl hoots. It's time.",
+   c:[["paw-prints","Hurry after the owl","The lanterns are lighting up","b4"]]},
+ b4:{img:"B04_hush",eyebrow:"The hidden glade",title:"Shh…",body:"The owl lands on a branch and lifts one wing to her beak. Behind a curtain of leaves, something glows warmly. Someone giggles. Someone else whispers, \"Shh, light the lanterns!\"",q:"How should they go in?",
+   c:[["paw-prints","Tiptoe in quietly","One soft step at a time","b5"],["sparkle","Part the leaves","All at once","b5"]]},
+ b5:{img:"B05_surprise",party:1,eyebrow:"Surprise!",title:`Happy birthday, ${NAME}!`,body:"Lanterns flicker on and petals fly into the air. The robin, the hedgehog, the owl, Moll and Sisu have gathered in the glade with one wish to share. The birthday wish was never for someone else. It was for you all along.",q:"What happens next?",
+   c:[["cake","Make a birthday wish","The candles are lit","b6"],["bunting","Start the party","Music, dancing and cake","b7"]]},
+ b6:{img:"B06_wish",candles:1,eyebrow:"Make a wish",title:"Close your eyes…",body:`Moll and Sisu hold out the cake, glowing with candles. Close your eyes, ${NAME}, make a wish, and blow them all out.`,q:"",
+   c:[["gift","Open your present","There is one more surprise","b8"],["bunting","Join the party","Everyone is waiting","b7"]]},
+ b7:{img:"B07_party",party:1,eyebrow:"The party",title:"Dancing under the stars",body:"The friends dance in a circle under the lanterns while glowing dandelion seeds drift up into the night like tiny fireworks. Nobody wants this night to end.",q:"",
+   c:[["gift","Open your present","There is one more surprise","b8"],again]},
+ b8:{img:"B08_gift",present:1,eyebrow:"One last surprise",title:"A present for you",body:"On the old stump waits one more present, tied with a red ribbon. The hedgehog says it came from a little hedgehog who loves you very much.",q:"",
+   c:[["heart","Read the letter again","From your hedgehog","@love"],["sparkle","Watch your little film","Lera and the forest friends","@film"],again]}
+};
+for(const k in S){ if(S[k].end){ Object.assign(S[k],{eyebrow:"Your ending",q:"",c:[toSurprise,again]}); } }
+
+/* where the characters sit in each picture: [top, bottom] as a share of image height */
+const BAND={"S02_start":[0.45,0.8],"S03_woods":[0.45,0.78],"S04_bird":[0.12,0.58],"S05_cave":[0.25,0.7],"S06_crystal":[0.25,0.64],"S07_overlook":[0.22,0.62],"S08_tree":[0.3,0.58],"S09_end_kindness":[0.08,0.6],"S10_end_rest":[0.25,0.6],"S11_end_friend":[0.3,0.64],"S12_end_tunnel":[0.22,0.56],"S13_end_crystal":[0.3,0.74],"S14_end_light":[0.3,0.72],"S15_end_stars":[0.33,0.66],"S16_end_home":[0.25,0.6],"B01_owl_letter":[0.1,0.68],"B02_lantern_path":[0.14,0.62],"B03a_flowers":[0.2,0.62],"B03b_crown":[0.15,0.58],"B04_hush":[0.1,0.66],"B05_surprise":[0.28,0.52],"B06_wish":[0.25,0.58],"B07_party":[0.2,0.66],"B08_gift":[0.18,0.58]};
+const $=id=>document.getElementById(id);
+const imgs=[$("imgA"),$("imgB")]; let front=0;
+let current=null, hist=[], gift=null, blown=false, opened=false;
+const src=k=>`img/${k}.webp`;
+const preloaded=new Set();
+function preload(keys){keys.forEach(k=>{if(!k||preloaded.has(k))return;preloaded.add(k);const i=new Image();i.src=src(k);});}
+
+function showImage(key,alt){
+  const next=imgs[1-front], cur=imgs[front];
+  if(cur.dataset.key===key){cur.alt=alt;return;}
+  let done=false;
+  const swap=()=>{ if(done||next.dataset.key!==key) return; done=true; fitImage(next); next.classList.add("on"); cur.classList.remove("on"); front=1-front; };
+  next.onload=swap;
+  next.alt=alt; next.dataset.key=key; next.src=src(key);
+  if(next.complete&&next.naturalWidth) swap();
+}
+
+function choiceHTML(c,i){
+  return `<button class="choice${i%2?" alt":""}" data-to="${c[3]}"><span class="emblem"><img src="ui/${c[0]}.webp" alt=""></span><span class="label">${c[1]}<span class="hint">${c[2]}</span></span><span class="arrow">›</span></button>`;
+}
+
+function render(id,push=true){
+  const s=S[id]; if(!s) return;
+  if(push&&current&&id!==current) hist.push(current);
+  current=id;
+  if(id==="b1") songEnsure();
+  if(id==="b5") playSong();
+  if(id==="b8") $("filmVideo").preload="auto";
+  if(s.gift) gift=s.gift;
+  const sheet=$("sheet");
+  sheet.classList.add("out");
+  showImage(s.img,s.title);
+  setTimeout(()=>{
+    $("eyebrow").textContent=s.eyebrow||"";
+    $("title").textContent=s.title;
+    let body=s.body;
+    if(id==="b5"&&gift) body+= gift==="flowers" ? " Sisu hands you the wildflower bouquet, beaming." : " Moll places the leaf crown gently on your head.";
+    $("body").textContent=body;
+    $("question").textContent=s.q||"";
+    $("question").hidden=!s.q;
+    const extra=$("extra"); extra.innerHTML="";
+    let showChoices=true;
+    if(s.candles){ blown=false; showChoices=false; extra.appendChild(candleWidget()); }
+    if(s.present){ opened=false; showChoices=false; extra.appendChild(presentWidget()); }
+    setChoices(showChoices?s.c:[]);
+    $("paper").scrollTop=0;
+    setPeek(true);
+    setTimeout(()=>sheet.classList.remove("out"),480);
+  },220);
+  $("back").disabled=!hist.length;
+  if(s.party) setTimeout(()=>confetti(id==="b5"?220:90),500);
+  preload(s.c.map(c=>S[c[3]]&&S[c[3]].img));
+}
+function setChoices(list){
+  $("choices").innerHTML=list.map(choiceHTML).join("");
+  $("choices").querySelectorAll(".choice").forEach(b=>b.addEventListener("click",()=>go(b.dataset.to)));
+}
+function go(to){
+  if(to==="@invite") return openLetter(LETTER_INVITE);
+  if(to==="@love") return openLetter(LETTER_LOVE);
+  if(to==="@film") return showFilm();
+  if(to==="start"){ hist=[]; gift=null; return render("start",false); }
+  render(to);
+}
+
+/* letter */
+function openLetter(html){
+  setPeek(false); $("app").scrollTop=0; $("letter").scrollTop=0;
+  $("letter").innerHTML=html; $("veil").classList.add("show"); setDuck(true);
+  const btn=$("letter").querySelector(".close"); btn.focus({preventScroll:true});
+  btn.addEventListener("click",()=>{ $("veil").classList.remove("show"); setDuck(false); const t=btn.dataset.close; if(t==="@film"){ if(!filmShown) setTimeout(showFilm,450); } else if(t) setTimeout(()=>render(t),250); });
+}
+
+/* candles */
+let micStream=null;
+function candleWidget(){
+  const w=document.createElement("div"); w.className="cake";
+  w.innerHTML=`<button class="candles" aria-label="Blow out the candles">${'<span class="candle"><span class="flame"></span><span class="smoke"></span></span>'.repeat(5)}</button>
+  <div class="micline" id="micline">Tap the candles to blow them out${navigator.mediaDevices&&navigator.mediaDevices.getUserMedia?' · <button class="micbtn" id="micbtn">or blow into the mic</button>':''}</div>`;
+  w.querySelector(".candles").addEventListener("click",blowOut);
+  const mb=w.querySelector("#micbtn"); if(mb) mb.addEventListener("click",listen);
+  return w;
+}
+function blowOut(){
+  if(blown) return; blown=true;
+  stopMic();
+  document.querySelector(".candles")?.classList.add("out");
+  $("micline").textContent="Your wish is on its way.";
+  $("title").textContent="Wish made!";
+  setTimeout(()=>{confetti(160); setChoices(S.b6.c);},600);
+}
+async function listen(){
+  const line=$("micline");
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    line.textContent="Listening… blow gently";
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const an=ctx.createAnalyser(); an.fftSize=512;
+    ctx.createMediaStreamSource(micStream).connect(an);
+    const data=new Uint8Array(an.fftSize); let loud=0;
+    (function tick(){
+      if(blown){ctx.close();return;}
+      an.getByteTimeDomainData(data);
+      let sum=0; for(const v of data){const x=(v-128)/128; sum+=x*x;}
+      const rms=Math.sqrt(sum/data.length);
+      loud = rms>0.18 ? loud+1 : Math.max(0,loud-1);
+      if(loud>8){ctx.close();blowOut();return;}
+      requestAnimationFrame(tick);
+    })();
+  }catch(e){ line.textContent="The microphone isn't available here. Tap the candles instead."; }
+}
+function stopMic(){ if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; } }
+
+/* present */
+function presentWidget(){
+  const w=document.createElement("div"); w.className="present";
+  w.innerHTML=`<button aria-label="Open the present"><img src="ui/gift.webp" alt=""><span>Tap to open</span></button>`;
+  w.querySelector("button").addEventListener("click",()=>{
+    if(opened) return; opened=true; w.classList.add("opened");
+    confetti(200);
+    setTimeout(()=>{ openLetter(LETTER_LOVE); w.remove(); setChoices(S.b8.c); },650);
+  });
+  return w;
+}
+
+/* confetti: watercolour petals */
+const cv=$("confetti"), cx=cv.getContext("2d"); let parts=[], running=false;
+const COLORS=["#e8a33d","#d9644a","#f2b7bf","#7f9a5b","#fff1cf","#6f8fc4","#f4d06f"];
+function confetti(n){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const r=cv.getBoundingClientRect(), d=Math.min(devicePixelRatio||1,2);
+  cv.width=r.width*d; cv.height=r.height*d; cx.setTransform(d,0,0,d,0,0);
+  for(let i=0;i<n;i++) parts.push({x:Math.random()*r.width,y:-20-Math.random()*r.height*.5,vx:(Math.random()-.5)*1.2,vy:1+Math.random()*2.2,
+    s:5+Math.random()*7,a:Math.random()*6.28,va:(Math.random()-.5)*.15,sw:Math.random()*6.28,c:COLORS[i%COLORS.length],h:r.height});
+  if(!running){running=true;requestAnimationFrame(step);}
+}
+function step(){
+  const w=cv.width,h=cv.height; cx.clearRect(0,0,w,h);
+  parts=parts.filter(p=>p.y<p.h+30);
+  for(const p of parts){
+    p.sw+=.05; p.x+=p.vx+Math.sin(p.sw)*.8; p.y+=p.vy; p.a+=p.va;
+    cx.save(); cx.translate(p.x,p.y); cx.rotate(p.a); cx.scale(1,Math.abs(Math.cos(p.sw))*.7+.3);
+    cx.globalAlpha=.88; cx.fillStyle=p.c; cx.beginPath(); cx.ellipse(0,0,p.s,p.s*.55,0,0,6.28); cx.fill();
+    cx.globalAlpha=.35; cx.strokeStyle="#5b3d24"; cx.lineWidth=.6; cx.stroke(); cx.restore();
+  }
+  if(parts.length) requestAnimationFrame(step); else {running=false; cx.clearRect(0,0,w,h);}
+}
+
+
+/* music: background loop (gapless, Web Audio) + Lera's birthday song at the reveal */
+const music={ctx:null,gain:null,buf:null,src:null,el:null,on:true,started:false,vol:.32,duck:false};
+const song={el:null,gain:null,playing:false};
+try{ music.on = localStorage.getItem("moll-music")!=="off"; }catch(e){}
+const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="#3f3a2b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.2h3.2l4.6-3.9v13.4l-4.6-3.9H4.5z" fill="#fbe7b0"/>';
+function drawSound(){
+  $("sound").innerHTML = SPK + (music.on
+    ? '<path d="M15.6 9.1c1.3 1.6 1.3 4.2 0 5.8"/><path d="M18.2 6.8c2.5 2.9 2.5 7.5 0 10.4"/></svg>'
+    : '<path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>');
+  $("sound").setAttribute("aria-pressed", music.on);
+  $("sound").setAttribute("aria-label", music.on ? "Turn music off" : "Turn music on");
+}
+const bgLevel=()=> (!music.on||song.playing) ? 0 : (music.duck ? music.vol*.45 : music.vol);
+const songLevel=()=> !music.on ? 0 : (music.duck ? .5 : .9);
+function ramp(g,v,t){ if(!g||!music.ctx) return; const p=g.gain,now=music.ctx.currentTime; p.cancelScheduledValues(now); p.setValueAtTime(p.value,now); p.linearRampToValueAtTime(v,now+t); }
+function applyLevels(tBg,tSong){
+  if(music.el){ music.el.volume=bgLevel(); if(bgLevel()>0&&music.el.paused) music.el.play().catch(()=>{}); if(bgLevel()===0) music.el.pause(); }
+  else ramp(music.gain,bgLevel(),tBg);
+  if(song.el){ if(song.gain) ramp(song.gain,songLevel(),tSong??tBg); else song.el.volume=songLevel(); }
+}
+function musicStart(){
+  if(!music.on) return;
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  try{
+    if(!music.ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      music.ctx=new AC(); music.gain=music.ctx.createGain(); music.gain.gain.value=0; music.gain.connect(music.ctx.destination);
+    }
+    if(music.ctx.state!=="running") music.ctx.resume();
+  }catch(e){ return musicFallback(); }
+  if(music.started){ applyLevels(1.2); return; }
+  music.started=true;
+  fetch("audio/whimsy-loop.mp3").then(r=>r.arrayBuffer())
+    .then(ab=>new Promise((res,rej)=>music.ctx.decodeAudioData(ab,res,rej)))
+    .then(buf=>{
+      const d=buf.getChannelData(0); let a=0,b=d.length-1;
+      while(a<b&&Math.abs(d[a])<1e-4) a++; while(b>a&&Math.abs(d[b])<1e-4) b--;
+      const src=music.ctx.createBufferSource(); src.buffer=buf; src.loop=true;
+      src.loopStart=a/buf.sampleRate; src.loopEnd=(b+1)/buf.sampleRate;
+      src.connect(music.gain); src.start(0,src.loopStart); music.src=src;
+      applyLevels(2.5);
+    }).catch(musicFallback);
+}
+function musicFallback(){
+  if(music.el) return;
+  music.started=true; music.ctx=null; music.gain=null;
+  music.el=new Audio("audio/whimsy-loop.mp3"); music.el.loop=true; music.el.volume=bgLevel();
+  if(bgLevel()>0) music.el.play().catch(()=>{});
+}
+function songEnsure(){
+  if(song.el) return;
+  song.el=new Audio("audio/birthday-song.mp3"); song.el.preload="auto";
+  song.el.addEventListener("ended",()=>{ song.playing=false; applyLevels(3); });
+  if(music.ctx){
+    try{ song.gain=music.ctx.createGain(); song.gain.gain.value=0;
+         music.ctx.createMediaElementSource(song.el).connect(song.gain); song.gain.connect(music.ctx.destination); }
+    catch(e){ song.gain=null; }
+  }
+}
+function playSong(){
+  if(!music.on) return;
+  musicStart(); songEnsure();
+  if(song.playing) return;
+  song.playing=true; try{ song.el.currentTime=0; }catch(e){}
+  if(!song.gain) song.el.volume=0;
+  song.el.play().then(()=>applyLevels(2.2,1.5)).catch(()=>{ song.playing=false; applyLevels(1); });
+}
+function stopSong(){
+  if(!song.playing) return;
+  song.playing=false; applyLevels(1.5,.8);
+  setTimeout(()=>{ if(!song.playing) song.el.pause(); },900);
+}
+function setDuck(on){ music.duck=on; if(music.started) applyLevels(.8); }
+$("sound").addEventListener("click",()=>{
+  music.on=!music.on; try{ localStorage.setItem("moll-music",music.on?"on":"off"); }catch(e){}
+  drawSound();
+  if(music.on){ musicStart(); if(song.playing) song.el.play().catch(()=>{}); applyLevels(1); }
+  else { applyLevels(.6); if(song.el) setTimeout(()=>{ if(!music.on) song.el.pause(); },700); }
+});
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){ if(song.el) song.el.pause(); if(music.el) music.el.pause(); if(music.ctx) music.ctx.suspend(); return; }
+  if(!music.on) return;
+  if(music.ctx) music.ctx.resume();
+  if(song.playing) song.el.play().catch(()=>{});
+  if(music.el&&bgLevel()>0) music.el.play().catch(()=>{});
+});
+drawSound();
+
+/* film */
+let filmShown=false;
+function showFilm(){ filmShown=true; const v=$("filmVideo"); $("film").classList.add("show"); v.play().catch(()=>{}); $("filmClose").focus({preventScroll:true}); }
+function hideFilm(){ if(!$("film").classList.contains("show")) return; $("film").classList.remove("show"); setTimeout(()=>$("filmVideo").pause(),500); }
+$("filmClose").addEventListener("click",hideFilm);
+$("film").addEventListener("click",e=>{ if(e.target.id==="film") hideFilm(); });
+
+/* wiring */
+$("start").addEventListener("click",()=>{ musicStart(); $("cover").classList.add("hide"); render("start",false);
+  if(!tipShown){ tipShown=true; const t=$("tip"); t.hidden=false; t.style.opacity=1; setTimeout(hideTip,4200); } });
+$("back").addEventListener("click",()=>{ if(hist.length){ stopMic(); render(hist.pop(),false); } });
+$("restart").addEventListener("click",()=>{ stopMic(); stopSong(); hist=[]; gift=null; $("guide").hidden=true; $("cover").classList.remove("hide"); });
+const openGuide=()=>{$("guide").hidden=false;$("guideClose").focus();};
+$("guideBtn").addEventListener("click",openGuide);
+function setPeek(on){
+  const sh=$("sheet"), t=$("title");
+  if(on) sh.style.setProperty("--peek",(t.offsetTop+t.offsetHeight+16)+"px");
+  sh.classList.toggle("peek",on);
+  if(!on) hideTip();
+  fitImage(imgs[front]);
+}
+function fitImage(img){
+  if(!img||!img.naturalWidth) return;
+  const band=BAND[img.dataset.key]||[.3,.7];
+  const app=$("app"), W=app.clientWidth, H=app.clientHeight, sh=$("sheet");
+  const sc=Math.max(W/img.naturalWidth,H/img.naturalHeight), Hd=img.naturalHeight*sc, top0=(H-Hd)*.38;
+  const peekOn=sh.classList.contains("peek");
+  const covered=peekOn ? parseFloat(getComputedStyle(sh).getPropertyValue("--peek"))||96 : sh.offsetHeight;
+  const head=$("app").querySelector(".top").offsetHeight+6;
+  const need=(top0+band[1]*Hd)-(H-covered-12);
+  const roomTop=(top0+band[0]*Hd)-head;
+  const roomBottom=(top0+Hd)-(H-covered+22);
+  const dy=Math.max(0,Math.min(need,roomTop,roomBottom));
+  img.style.setProperty("--dy",dy.toFixed(1)+"px");
+}
+$("scene").addEventListener("click",()=>setPeek(!$("sheet").classList.contains("peek")));
+$("sheet").addEventListener("click",e=>{ if($("sheet").classList.contains("peek")){ e.stopPropagation(); setPeek(false); } },true);
+addEventListener("resize",()=>{ if(current) setPeek($("sheet").classList.contains("peek")); });
+let tipShown=false; function hideTip(){ $("tip").style.opacity=0; }
+$("guideClose").addEventListener("click",()=>{$("guide").hidden=true;});
+$("veil").addEventListener("click",e=>{ if(e.target.id==="veil"){ $("veil").classList.remove("show"); setDuck(false); }});
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ hideFilm(); $("veil").classList.remove("show"); setDuck(false); $("guide").hidden=true; }});
+preload(["S02_start","S03_woods","S05_cave"]);
+showImage("S02_start","A fork in the path");
+</script>
+
+</body></html>
