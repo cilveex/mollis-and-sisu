@@ -115,7 +115,7 @@ button:focus-visible{outline:3px solid var(--ember);outline-offset:3px;border-ra
 @keyframes burst{40%{transform:scale(1.2) rotate(-6deg)}100%{transform:scale(1.6);opacity:0}}
 
 /* letter overlay */
-.veil{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;background:#211d14b8;opacity:0;pointer-events:none;transition:opacity .4s;
+.veil{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;background:transparent;opacity:0;pointer-events:none;transition:opacity .4s;
   padding-block:calc(env(safe-area-inset-top,0px) + 20px) calc(env(safe-area-inset-bottom,0px) + 20px);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .veil.show{opacity:1;pointer-events:auto}
@@ -153,7 +153,7 @@ button:focus-visible{outline:3px solid var(--ember);outline-offset:3px;border-ra
 .guide .letter{transform:rotate(1deg);text-align:center;font-size:23px}
 
 /* the little film: a looping instant photo */
-.film{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#211d14c9;opacity:0;pointer-events:none;transition:opacity .5s;
+.film{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:transparent;opacity:0;pointer-events:none;transition:opacity .5s;
   padding-block:calc(env(safe-area-inset-top,0px) + 20px) calc(env(safe-area-inset-bottom,0px) + 20px);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .film.show{opacity:1;pointer-events:auto}
@@ -163,6 +163,9 @@ button:focus-visible{outline:3px solid var(--ember);outline-offset:3px;border-ra
 .polaroid:before{content:"";position:absolute;top:-13px;left:50%;width:96px;height:26px;margin-left:-48px;background:#e9cf94b3;transform:rotate(4deg);box-shadow:0 1px 2px #0002}
 .polaroid video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#2a261a}
 .polaroid p{margin:0;padding:12px 4px 16px;text-align:center;font-family:var(--f-hand);font-size:26px;font-weight:700;color:var(--ink)}
+/* dark backdrop sits under the confetti; letter and photo sit above it */
+.dim{position:absolute;inset:0;z-index:5;background:#211d14b0;opacity:0;pointer-events:none;transition:opacity .45s}
+.dim.show{opacity:1}
 canvas#confetti{position:absolute;inset:0;z-index:7;pointer-events:none;width:100%;height:100%}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
@@ -195,6 +198,7 @@ canvas#confetti{position:absolute;inset:0;z-index:7;pointer-events:none;width:10
   </div>
 
   <div class="tip" id="tip" hidden>Tap the page below to read the story</div>
+  <div class="dim" id="dim"></div>
   <canvas id="confetti"></canvas>
 
   <div class="film" id="film" role="dialog" aria-modal="true" aria-label="A little film for Lera">
@@ -239,9 +243,23 @@ const LETTER_LOVE = `
   <p>Ты самая красивая, и я говорю это не просто так. Когда ты смеёшься, твои глаза светятся, как янтарь.</p>
   <p>Ты видишь в людях то, что никто не замечает. И ты увидела это во мне.</p>
   <p>Спасибо, что ты рядом. За наш дом, за Моллиса, за наши вечера под одеялом.</p>
+  <p>Пусть в твоей жизни будет много волшебных моментов и целая страна чудес, полная красок и музыки. Твой смех — моя самая любимая музыка. А когда мир вокруг становится слишком шумным, пусть этот маленький подарок поможет тебе закрыть глаза, раствориться в музыке и уйти в свой собственный волшебный мир. Хотя бы ненадолго. Только для себя.</p>
   <p>Я не всегда умею говорить красивые слова. Но я тебя очень люблю. И выбираю тебя каждый день.</p>
   <p class="sign">Твой ёжик 🦔</p>
-  <button class="close" data-close="@film">Close the letter</button>`;
+  <button class="close" data-close="@unwrap">Close the letter</button>`;
+
+const UNWRAP_1 = `
+  <img class="stamp" src="ui/gift.webp" alt="">
+  <h2>One more surprise…</h2>
+  <p>This one isn't in the forest. Your hedgehog has a real present for you.</p>
+  <p>Go find him and unwrap it!</p>
+  <button class="close" data-close="@ready">I've unwrapped it ✓</button>`;
+
+const UNWRAP_2 = `
+  <img class="stamp" src="ui/star.webp" alt="">
+  <h2>Now put them on</h2>
+  <p>Get cosy, close your eyes for a moment, and when you're ready, press play.</p>
+  <button class="close" data-close="@play">▶ Play my song</button>`;
 
 const toSurprise = ["envelope","Wait… what's that?","Something is flying this way","b1"];
 const again = ["open-book","Read another adventure","Try a different path","start"];
@@ -288,7 +306,7 @@ const S = {
  b7:{img:"B07_party",party:1,eyebrow:"The party",title:"Dancing under the stars",body:"The friends dance in a circle under the lanterns while glowing dandelion seeds drift up into the night like tiny fireworks. Nobody wants this night to end.",q:"",
    c:[["gift","Open your present","There is one more surprise","b8"],again]},
  b8:{img:"B08_gift",present:1,eyebrow:"One last surprise",title:"A present for you",body:"On the old stump waits one more present, tied with a red ribbon. The hedgehog says it came from a little hedgehog who loves you very much.",q:"",
-   c:[["heart","Read the letter again","From your hedgehog","@love"],["sparkle","Watch your little film","Lera and the forest friends","@film"],again]}
+   c:[["heart","Read the letter again","From your hedgehog","@love"],["sparkle","Play my song","With the little film","@play"],again]}
 };
 for(const k in S){ if(S[k].end){ Object.assign(S[k],{eyebrow:"Your ending",q:"",c:[toSurprise,again]}); } }
 
@@ -320,7 +338,6 @@ function render(id,push=true){
   if(push&&current&&id!==current) hist.push(current);
   current=id;
   if(id==="b1") songEnsure();
-  if(id==="b5") playSong();
   if(id==="b8") $("filmVideo").preload="auto";
   if(s.gift) gift=s.gift;
   const sheet=$("sheet");
@@ -355,6 +372,7 @@ function go(to){
   if(to==="@invite") return openLetter(LETTER_INVITE);
   if(to==="@love") return openLetter(LETTER_LOVE);
   if(to==="@film") return showFilm();
+  if(to==="@play") return startFinale();
   if(to==="start"){ hist=[]; gift=null; return render("start",false); }
   render(to);
 }
@@ -363,8 +381,17 @@ function go(to){
 function openLetter(html){
   setPeek(false); $("app").scrollTop=0; $("letter").scrollTop=0;
   $("letter").innerHTML=html; $("veil").classList.add("show"); setDuck(true);
+  if(html===LETTER_LOVE){ rain(true); if(finaleDone) $("letter").querySelector(".close").dataset.close=""; }
   const btn=$("letter").querySelector(".close"); btn.focus({preventScroll:true});
-  btn.addEventListener("click",()=>{ $("veil").classList.remove("show"); setDuck(false); const t=btn.dataset.close; if(t==="@film"){ if(!filmShown) setTimeout(showFilm,450); } else if(t) setTimeout(()=>render(t),250); });
+  btn.addEventListener("click",()=>{
+    const t=btn.dataset.close;
+    if(t==="@unwrap") return openLetter(UNWRAP_1);
+    if(t==="@ready") return openLetter(UNWRAP_2);
+    $("veil").classList.remove("show"); setDuck(false);
+    if(!song.playing) rain(false);
+    if(t==="@play") return startFinale();
+    if(t) setTimeout(()=>render(t),250);
+  });
 }
 
 /* candles */
@@ -425,10 +452,16 @@ const COLORS=["#e8a33d","#d9644a","#f2b7bf","#7f9a5b","#fff1cf","#6f8fc4","#f4d0
 function confetti(n){
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const r=cv.getBoundingClientRect(), d=Math.min(devicePixelRatio||1,2);
-  cv.width=r.width*d; cv.height=r.height*d; cx.setTransform(d,0,0,d,0,0);
+  if(cv.width!==Math.round(r.width*d)||cv.height!==Math.round(r.height*d)){ cv.width=Math.round(r.width*d); cv.height=Math.round(r.height*d); }
+  cx.setTransform(d,0,0,d,0,0);
   for(let i=0;i<n;i++) parts.push({x:Math.random()*r.width,y:-20-Math.random()*r.height*.5,vx:(Math.random()-.5)*1.2,vy:1+Math.random()*2.2,
     s:5+Math.random()*7,a:Math.random()*6.28,va:(Math.random()-.5)*.15,sw:Math.random()*6.28,c:COLORS[i%COLORS.length],h:r.height});
   if(!running){running=true;requestAnimationFrame(step);}
+}
+let rainTimer=null;
+function rain(on){
+  if(on&&!rainTimer) rainTimer=setInterval(()=>confetti(2),380);
+  if(!on&&rainTimer){ clearInterval(rainTimer); rainTimer=null; }
 }
 function step(){
   const w=cv.width,h=cv.height; cx.clearRect(0,0,w,h);
@@ -495,7 +528,7 @@ function musicFallback(){
 function songEnsure(){
   if(song.el) return;
   song.el=new Audio("audio/birthday-song.mp3"); song.el.preload="auto";
-  song.el.addEventListener("ended",()=>{ song.playing=false; applyLevels(3); });
+  song.el.addEventListener("ended",()=>{ song.playing=false; rain(false); applyLevels(3); });
   if(music.ctx){
     try{ song.gain=music.ctx.createGain(); song.gain.gain.value=0;
          music.ctx.createMediaElementSource(song.el).connect(song.gain); song.gain.connect(music.ctx.destination); }
@@ -512,7 +545,7 @@ function playSong(){
 }
 function stopSong(){
   if(!song.playing) return;
-  song.playing=false; applyLevels(1.5,.8);
+  song.playing=false; rain(false); applyLevels(1.5,.8);
   setTimeout(()=>{ if(!song.playing) song.el.pause(); },900);
 }
 function setDuck(on){ music.duck=on; if(music.started) applyLevels(.8); }
@@ -531,12 +564,24 @@ document.addEventListener("visibilitychange",()=>{
 });
 drawSound();
 
+/* finale: her song + the little film + falling confetti */
+let finaleDone=false;
+function startFinale(){
+  finaleDone=true;
+  if(!music.on){ music.on=true; try{ localStorage.setItem("moll-music","on"); }catch(e){} drawSound(); }
+  playSong(); showFilm(); rain(true);
+}
 /* film */
 let filmShown=false;
 function showFilm(){ filmShown=true; const v=$("filmVideo"); $("film").classList.add("show"); v.play().catch(()=>{}); $("filmClose").focus({preventScroll:true}); }
 function hideFilm(){ if(!$("film").classList.contains("show")) return; $("film").classList.remove("show"); setTimeout(()=>$("filmVideo").pause(),500); }
 $("filmClose").addEventListener("click",hideFilm);
 $("film").addEventListener("click",e=>{ if(e.target.id==="film") hideFilm(); });
+
+/* keep the backdrop in step with the letter and the film */
+const syncDim=()=>$("dim").classList.toggle("show",$("veil").classList.contains("show")||$("film").classList.contains("show"));
+new MutationObserver(syncDim).observe($("veil"),{attributes:true,attributeFilter:["class"]});
+new MutationObserver(syncDim).observe($("film"),{attributes:true,attributeFilter:["class"]});
 
 /* wiring */
 $("start").addEventListener("click",()=>{ musicStart(); $("cover").classList.add("hide"); render("start",false);
@@ -571,7 +616,7 @@ $("sheet").addEventListener("click",e=>{ if($("sheet").classList.contains("peek"
 addEventListener("resize",()=>{ if(current) setPeek($("sheet").classList.contains("peek")); });
 let tipShown=false; function hideTip(){ $("tip").style.opacity=0; }
 $("guideClose").addEventListener("click",()=>{$("guide").hidden=true;});
-$("veil").addEventListener("click",e=>{ if(e.target.id==="veil"){ $("veil").classList.remove("show"); setDuck(false); }});
+$("veil").addEventListener("click",e=>{ if(e.target.id==="veil"){ $("veil").classList.remove("show"); setDuck(false); if(!song.playing) rain(false); }});
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ hideFilm(); $("veil").classList.remove("show"); setDuck(false); $("guide").hidden=true; }});
 preload(["S02_start","S03_woods","S05_cave"]);
 showImage("S02_start","A fork in the path");
